@@ -25,6 +25,8 @@ package uk.co.controlz.aws;
 
 import java.sql.Connection;
 import java.sql.Driver;
+import java.sql.DriverManager;
+import java.sql.DriverPropertyInfo;
 
 import java.util.Map;
 import java.util.Properties;
@@ -33,33 +35,116 @@ import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
+/**
+ * Tests for IAM JDBC Driver wrapper for MySQL.
+ *
+ * @author Rik Turnbull
+ *
+ */
 public class IAMJDBCDriverTest extends TestCase {
-  public IAMJDBCDriverTest(String testName)  {
-      super(testName);
-  }
+  private final static String IAMJDBCDRIVER_JKS_URL = "file:src/test/resources/rds-ca-2015-root.jks";
+  private final static String IAMJDBCDRIVER_JKS_PASSWORD = "changeme";
+  private final static String IAMJDBCDRIVER_REGION = "IAMJDBCDRIVER_REGION";
+  private final static String IAMJDBCDRIVER_URL = "IAMJDBCDRIVER_URL";
+  private final static String IAMJDBCDRIVER_USER = "IAMJDBCDRIVER_USER";
 
+
+
+  /**
+   * Fetches all the tests.
+   *
+   * @returns test suite
+   */
   public static Test suite() {
     return new TestSuite(IAMJDBCDriverTest.class);
   }
 
+  /**
+   * Tests the connect method.
+   */
   public void testConnect() {
+    Map<String, String> env = getEnv();
+
     try {
-      Driver driver = (Driver) Class.forName("uk.co.controlz.aws.IAMJDBCDriver").newInstance();
-      Map<String, String> env = System.getenv();
-      if(env.containsKey("IAMJDBCDRIVER_REGION") && env.containsKey("IAMJDBCDRIVER_USER") && env.containsKey("IAMJDBCDRIVER_URL")) {
-        Properties info = new Properties();
-        info.setProperty("awsRegion", env.get("IAMJDBCDRIVER_REGION"));
-        info.setProperty("requireSSL", "true");
-        info.setProperty("user", env.get("IAMJDBCDRIVER_USER"));
-        info.setProperty("useSSL", "true");
-        info.setProperty("verifyServerCertificate", "false");
-        Connection connection = driver.connect(env.get("IAMJDBCDRIVER_URL"), info);
-        System.out.println("CONNECTED!");
+      if(env != null) {
+        Connection connection = DriverManager.getConnection(env.get(IAMJDBCDRIVER_URL), getProperties(env));
+        assertNotNull(connection);
         connection.close();
       }
     } catch(Exception e) {
       e.printStackTrace();
+      fail(e.getMessage());
     }
-    assertTrue( true );
+  }
+
+  /**
+   * Tests the acceptUrl method.
+   */
+  public void testAcceptsUrl() {
+    try {
+      Driver driver = new IAMJDBCDriver();
+      assertTrue("jdbc:mysqliam", driver.acceptsURL("jdbc:mysqliam://cluster.eu-west-1.rds.amazonaws.com:3306/mydb"));
+      assertFalse("jdbc:mysql", driver.acceptsURL("jdbc:mysql://cluster.eu-west-1.rds.amazonaws.com:3306/mydb"));
+    } catch(Exception e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+  }
+
+  /**
+   * Tests the getPropertyInfo method.
+   */
+  public void testGetPropertyInfo() {
+    Map<String, String> env = getEnv();
+
+    try {
+      if(env != null) {
+        Driver driver = new IAMJDBCDriver();
+        boolean found = false;
+        for(DriverPropertyInfo info : driver.getPropertyInfo(env.get(IAMJDBCDRIVER_URL), getProperties(env))) {
+          if("awsRegion".equals(info.name)) {
+            found = true;
+          }
+        }
+        assertEquals("awsRegion", true, found);
+      }
+    } catch(Exception e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+  }
+
+  /**
+   * Fetches the environment, if any JDBC settings are configured.
+   *
+   * @returns the system environment or null if there are no JDBC settings
+   */
+  private Map<String, String> getEnv() {
+    final Map<String, String> env = System.getenv();
+    if(env.containsKey(IAMJDBCDRIVER_REGION) && env.containsKey(IAMJDBCDRIVER_USER) && env.containsKey(IAMJDBCDRIVER_URL)) {
+      return System.getenv();
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Fetches the JDBC driver properties.
+   *
+   * @param env the system environment containing JDBC settings
+   * @return driver properties
+   */
+  private Properties getProperties(Map<String, String> env) {
+    Properties properties = null;
+
+    properties = new Properties();
+    properties.setProperty("awsRegion", env.get(IAMJDBCDRIVER_REGION));
+    properties.setProperty("requireSSL", "true");
+    properties.setProperty("user", env.get(IAMJDBCDRIVER_USER));
+    properties.setProperty("useSSL", "true");
+    properties.setProperty("trustCertificateKeyStoreUrl", IAMJDBCDRIVER_JKS_URL);
+    properties.setProperty("trustCertificateKeyStorePassword", IAMJDBCDRIVER_JKS_PASSWORD);
+
+    return properties;
   }
 }

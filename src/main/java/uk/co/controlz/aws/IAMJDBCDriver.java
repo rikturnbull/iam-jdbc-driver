@@ -38,13 +38,31 @@ import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * IAM JDBC Driver wrapper for MySQL.
+ *
+ * @author Rik Turnbull
+ *
+ */
 public class IAMJDBCDriver implements java.sql.Driver {
 
-  private static final Logger LOGGER = Logger.getLogger(IAMJDBCDriver.class.getName());
+  private final static Logger LOGGER = Logger.getLogger(IAMJDBCDriver.class.getName());
+
+  private final static String DRIVER_ALIAS = ":mysqliam:";
+  private final static String DRIVER_URL_PREFIX = "jdbc" + DRIVER_ALIAS;
+
+  private final static String PROPERTY_AWS_REGION = "awsRegion";
+  private final static String PROPERTY_PASSWORD = "password";
+  private final static String PROPERTY_USER = "user";
+
+  private final static String MYSQL_DRIVER_ALIAS = ":mysql:";
+  private final static String MYSQL_DRIVER_CLASS= "com.mysql.jdbc.Driver";
 
   static {
     try {
@@ -56,11 +74,26 @@ public class IAMJDBCDriver implements java.sql.Driver {
 
   private Driver _mysqlDriver;
 
+  /**
+   * Creates a new {@link IAMJDBCDriver}.
+   *
+   * @throws ClassNotFoundException if the MySQL driver class is not found
+   * @throws IllegalAccessException if the MySQL driver cannot be instantiated
+   * @throws InstantiationException if the MySQL driver cannot be instantiated
+   */
   public IAMJDBCDriver() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
-    _mysqlDriver = (Driver) Class.forName("com.mysql.jdbc.Driver").newInstance();
+    _mysqlDriver = (Driver) Class.forName(MYSQL_DRIVER_CLASS).newInstance();
   }
 
-  public static String generateAuthToken(String region, String hostName, String port, String username) {
+  /**
+   * Generates an RDS authentication token.
+   *
+   * @param region the AWS region name
+   * @param hostname the RDS instance hostname
+   * @param port the RDS instance port
+   * @param username the RDS instance username
+   */
+  public static String generateAuthToken(String region, String hostname, String port, String username) {
 	    final RdsIamAuthTokenGenerator generator = RdsIamAuthTokenGenerator.builder()
 		    .credentials(new DefaultAWSCredentialsProviderChain())
 		    .region(region)
@@ -68,33 +101,88 @@ public class IAMJDBCDriver implements java.sql.Driver {
 
 	    return(generator.getAuthToken(
 		    GetIamAuthTokenRequest.builder()
-		    .hostname(hostName)
+		    .hostname(hostname)
 		    .port(Integer.parseInt(port))
 		    .userName(username)
 		    .build()));
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public boolean acceptsURL(String url) throws SQLException {
-    return _mysqlDriver.acceptsURL(url);
+    return url != null && url.startsWith(DRIVER_URL_PREFIX);
   }
 
-  public Connection connect(String url, Properties info) throws SQLException {
-    URI uri = URI.create(url.substring(5));
+  /**
+   * {@inheritDoc}
+   */
+  public Connection connect(String url, Properties properties) throws SQLException {
+    String mySQLUrl = url.replace(DRIVER_ALIAS, MYSQL_DRIVER_ALIAS);
+    URI uri = URI.create(mySQLUrl.substring(5));
 
     String password = generateAuthToken(
-      info.getProperty("awsRegion"),
+      properties.getProperty(PROPERTY_AWS_REGION),
       uri.getHost(),
       String.valueOf(uri.getPort()),
-      getUsernameFromUrlOrProperties(uri, info)
+      getUsernameFromUriOrProperties(uri, properties)
     );
 
-    info.setProperty("password", password);
+    properties.setProperty(PROPERTY_PASSWORD, password);
 
-    return _mysqlDriver.connect(url, info);
+    return _mysqlDriver.connect(mySQLUrl, properties);
   }
 
-  private String getUsernameFromUrlOrProperties(URI uri, Properties info) {
-    String username = info.getProperty("user");
+  /**
+   * {@inheritDoc}
+   */
+  public int getMajorVersion() {
+    return _mysqlDriver.getMajorVersion();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public int getMinorVersion() {
+    return _mysqlDriver.getMinorVersion();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+    return _mysqlDriver.getParentLogger();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public DriverPropertyInfo[] getPropertyInfo(String url, Properties properties) throws SQLException {
+    DriverPropertyInfo[] info = _mysqlDriver.getPropertyInfo(url, properties);
+    if(info != null) {
+      ArrayList<DriverPropertyInfo> infoList = new ArrayList<DriverPropertyInfo>(Arrays.asList(info));
+      infoList.add(new DriverPropertyInfo(PROPERTY_AWS_REGION, null));
+      info = infoList.toArray(new DriverPropertyInfo[infoList.size()]);
+    }
+    return info;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public boolean jdbcCompliant() {
+    return _mysqlDriver.jdbcCompliant();
+  }
+
+  /**
+   * Fetches the username from the properties and if it is missing checks the jdbc uri.
+   *
+   * @param uri jdbc uri
+   * @param properties jdbc properties
+   * @returns the username
+   */
+  private String getUsernameFromUriOrProperties(URI uri, Properties properties) {
+    String username = properties.getProperty(PROPERTY_USER);
 
     if(username == null) {
       final String userInfo = uri.getUserInfo();
@@ -104,25 +192,5 @@ public class IAMJDBCDriver implements java.sql.Driver {
     }
 
     return username;
-  }
-
-  public int getMajorVersion() {
-    return _mysqlDriver.getMajorVersion();
-  }
-
-  public int getMinorVersion() {
-    return _mysqlDriver.getMinorVersion();
-  }
-
-  public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-    return _mysqlDriver.getParentLogger();
-  }
-
-  public DriverPropertyInfo[] getPropertyInfo(String url, Properties info) throws SQLException {
-    return _mysqlDriver.getPropertyInfo(url, info);
-  }
-
-  public boolean jdbcCompliant() {
-    return _mysqlDriver.jdbcCompliant();
   }
 }
