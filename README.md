@@ -22,7 +22,8 @@ Amazon use their own CA for signing RDS certificates. Therefore, you may choose 
 or generate a JKS keystore:
 
 ```wget https://s3.amazonaws.com/rds-downloads/rds-ca-2015-root.pem
-keytool -import -file rds-ca-2015-root.pem -alias rds-ca-2015-root -keystore rds-ca-2015-root.jks```
+keytool -import -file rds-ca-2015-root.pem -alias rds-ca-2015-root -keystore rds-ca-2015-root.jks
+```
 
 then add your jks keystore properties:
 
