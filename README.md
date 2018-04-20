@@ -21,7 +21,8 @@ Amazon use their own CA for signing RDS certificates. Therefore, you may choose 
 
 or generate a JKS keystore:
 
-```wget https://s3.amazonaws.com/rds-downloads/rds-ca-2015-root.pem
+```bash
+wget https://s3.amazonaws.com/rds-downloads/rds-ca-2015-root.pem
 keytool -import -file rds-ca-2015-root.pem -alias rds-ca-2015-root -keystore rds-ca-2015-root.jks
 ```
 
@@ -45,7 +46,8 @@ This way you will have a single JAR file containing all the dependencies, includ
 If you download the JAR file (`iam-jdbc-driver-1.1.0.jar`) from the release page, then you must source and add
 the dependencies to your classpath. These are:
 
-```uk.co.controlz.aws:iam-jdbc-driver:jar:1.0.0
+```
+uk.co.controlz.aws:iam-jdbc-driver:jar:1.0.0
 +- com.amazonaws:aws-java-sdk-core:jar:1.11.310
   +- commons-logging:commons-logging:jar:1.1.3
   +- org.apache.httpcomponents:httpclient:jar:4.5.5
