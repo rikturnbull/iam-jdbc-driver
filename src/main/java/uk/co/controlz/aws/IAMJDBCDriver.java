@@ -118,6 +118,9 @@ public class IAMJDBCDriver implements java.sql.Driver {
    * {@inheritDoc}
    */
   public Connection connect(String url, Properties properties) throws SQLException {
+    if(!acceptsURL(url)) {
+      throw new SQLException("Invalid url: '" + url + "'");
+    }
     String mySQLUrl = url.replace(DRIVER_ALIAS, MYSQL_DRIVER_ALIAS);
     URI uri = URI.create(mySQLUrl.substring(5));
 
