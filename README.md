@@ -41,13 +41,12 @@ If you build the driver (recommended), then run maven with:
 
 This way you will have a single JAR file containing all the dependencies, including the MySQL driver and AWS SDK:
 
-```target/iam-jdbc-driver-1.1.0-SNAPSHOT-jar-with-dependencies.jar```
+```target/iam-jdbc-driver-1.1.1-SNAPSHOT-jar-with-dependencies.jar```
 
-If you download the JAR file (`iam-jdbc-driver-1.1.0.jar`) from the release page, then you must source and add
+If you download the ZIP file (`iam-jdbc-driver-1.1.0.zip`) from the release page, you must unpack it first and you must source and add
 the dependencies to your classpath. These are:
 
 ```
-uk.co.controlz.aws:iam-jdbc-driver:jar:1.0.0
 +- com.amazonaws:aws-java-sdk-core:jar:1.11.310
   +- commons-logging:commons-logging:jar:1.1.3
   +- org.apache.httpcomponents:httpclient:jar:4.5.5
