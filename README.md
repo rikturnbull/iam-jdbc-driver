@@ -1,3 +1,5 @@
+*Warning: beta-only - this driver has not been full tested beyond a simple connect and query*
+
 # iam-jdbc-driver
 A JDBC Driver wrapped around the standard MySQL JDBC Driver that provides IAM authentication for connecting to AWS Aurora MySQL or AWS RDS for MySQL, as described in [IAM Database Authentication for MySQL and Amazon Aurora](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html).
 
