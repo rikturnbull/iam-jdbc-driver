@@ -89,9 +89,9 @@
           <plugin>
             <artifactId>maven-assembly-plugin</artifactId>
             <configuration>
-              <descriptorRefs>
-                <descriptorRef>jar-with-dependencies</descriptorRef>
-              </descriptorRefs>
+              <descriptors>
+                <descriptor>src/assembly/src.xml</descriptor>
+              </descriptors>
             </configuration>
             <executions>
               <execution>
